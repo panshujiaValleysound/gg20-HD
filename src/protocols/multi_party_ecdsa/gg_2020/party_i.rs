@@ -284,130 +284,6 @@ impl Keys {
         (bcm1, decom1)
     }
 
-    pub fn phase1_verify_com_phase3_verify_correct_key_verify_dlog_phase2_distribute(
-        &self,
-        params: &Parameters,
-        decom_vec: &[KeyGenDecommitMessage1],
-        bc1_vec: &[KeyGenBroadcastMessage1],
-    ) -> Result<(VerifiableSS<Secp256k1>, Vec<Scalar<Secp256k1>>, usize), ErrorType> {
-        log::info!("MP-ECDSA : Round 2 : params {:?}", params);
-        log::info!("MP-ECDSA : Round 2 : decom_vec {:?}", decom_vec);
-        log::info!("MP-ECDSA : Round 2 : bc1_vec {:?}", bc1_vec);
-
-        let mut bad_actors_vec = Vec::new();
-        // test length:
-        log::info!(
-            "MP-ECDSA : Round 2 : decom_vec length ({:?}, ({:?}))",
-            decom_vec.len(),
-            usize::from(params.share_count)
-        );
-        log::info!(
-            "MP-ECDSA : Round 2 : bc1_vec length ({:?}, ({:?}))",
-            bc1_vec.len(),
-            usize::from(params.share_count)
-        );
-        assert_eq!(decom_vec.len(), usize::from(params.share_count));
-        assert_eq!(bc1_vec.len(), usize::from(params.share_count));
-        // test paillier correct key, h1,h2 correct generation and test decommitments
-        let correct_key_correct_decom_all = (0..bc1_vec.len())
-            .map(|i| {
-                let dlog_statement_base_h2 = DLogStatement {
-                    N: bc1_vec[i].dlog_statement.N.clone(),
-                    g: bc1_vec[i].dlog_statement.ni.clone(),
-                    ni: bc1_vec[i].dlog_statement.g.clone(),
-                };
-                let test_res_1 =
-                    HashCommitment::<Sha256>::create_commitment_with_user_defined_randomness(
-                        &BigInt::from_bytes(&decom_vec[i].y_i.to_bytes(true)),
-                        &decom_vec[i].blind_factor,
-                    ) == bc1_vec[i].com;
-                log::info!("MP-ECDSA : Round 2 : test_res_1 {:?}", test_res_1);
-
-                if !test_res_1 {
-                    // Do a dumb test to search if the right decommit exists
-                    for j in 0..bc1_vec.len() {
-                        if i != j {
-                            let test_res_1_1 =
-                                HashCommitment::<Sha256>::create_commitment_with_user_defined_randomness(
-                                    &BigInt::from_bytes(&decom_vec[j].y_i.to_bytes(true)),
-                                    &decom_vec[j].blind_factor,
-                                ) == bc1_vec[i].com;
-                            if test_res_1_1 {
-                                log::info!("MP-ECDSA : Round 2 RETEST : test_res_1_1 {:?}", test_res_1_1);
-                                log::info!("MP-ECDSA : Round 2 RETEST : i {:?}", i);
-                                log::info!("MP-ECDSA : Round 2 RETEST : j {:?}", j);
-                                log::info!("MP-ECDSA : Round 2 RETEST : decom_vec[i] {:?}", decom_vec[i]);
-                                log::info!("MP-ECDSA : Round 2 RETEST : decom_vec[j] {:?}", decom_vec[j]);
-                                log::info!("MP-ECDSA : Round 2 RETEST : bc1_vec[i] {:?}", bc1_vec[i]);
-                                log::info!("MP-ECDSA : Round 2 RETEST : bc1_vec[j] {:?}", bc1_vec[j]);
-                            }
-                        }
-                    }
-                }
-
-                let test_res_2 = bc1_vec[i]
-                    .correct_key_proof
-                    .verify(&bc1_vec[i].e, zk_paillier::zkproofs::SALT_STRING)
-                    .is_ok();
-                log::info!("MP-ECDSA : Round 2 : test_res_2 {:?}", test_res_2);
-
-                let test_res_3 = bc1_vec[i].e.n.bit_length() >= PAILLIER_MIN_BIT_LENGTH;
-                log::info!("MP-ECDSA : Round 2 : test_res_3 {:?}", test_res_3);
-
-                let test_res_4 = bc1_vec[i].e.n.bit_length() <= PAILLIER_MAX_BIT_LENGTH;
-                log::info!("MP-ECDSA : Round 2 : test_res_4 {:?}", test_res_4);
-
-                let test_res_5 =
-                    bc1_vec[i].dlog_statement.N.bit_length() >= PAILLIER_MIN_BIT_LENGTH;
-                log::info!("MP-ECDSA : Round 2 : test_res_5 {:?}", test_res_5);
-
-                let test_res_6 =
-                    bc1_vec[i].dlog_statement.N.bit_length() <= PAILLIER_MAX_BIT_LENGTH;
-                log::info!("MP-ECDSA : Round 2 : test_res_6 {:?}", test_res_6);
-                let test_res_7 = bc1_vec[i]
-                    .composite_dlog_proof_base_h1
-                    .verify(&bc1_vec[i].dlog_statement)
-                    .is_ok();
-                log::info!("MP-ECDSA : Round 2 : test_res_7 {:?}", test_res_7);
-                let test_res_8 = bc1_vec[i]
-                    .composite_dlog_proof_base_h2
-                    .verify(&dlog_statement_base_h2)
-                    .is_ok();
-                log::info!("MP-ECDSA : Round 2 : test_res_8 {:?}", test_res_8);
-
-                let test_res = test_res_1
-                    && test_res_2
-                    && test_res_3
-                    && test_res_4
-                    && test_res_5
-                    && test_res_6
-                    && test_res_7
-                    && test_res_8;
-
-                if !test_res {
-                    bad_actors_vec.push(i);
-                    false
-                } else {
-                    true
-                }
-            })
-            .all(|x| x);
-
-        let err_type = ErrorType {
-            error_type: "invalid key".to_string(),
-            bad_actors: bad_actors_vec,
-            data: Vec::new(),
-        };
-
-        let (vss_scheme, secret_shares) =
-            VerifiableSS::share(params.threshold, params.share_count, &self.u_i);
-        if correct_key_correct_decom_all {
-            Ok((vss_scheme, secret_shares.to_vec(), self.party_index))
-        } else {
-            Err(err_type)
-        }
-    }
-
     pub fn phase1_verify_com_phase3_verify_correct_key_verify_dlog_phase2_distribute_nsf_proof(
         &self,
         params: &Parameters,
@@ -431,7 +307,7 @@ impl Keys {
                         &BigInt::from_bytes(&decom_vec[i].y_i.to_bytes(true)),
                         &decom_vec[i].blind_factor,
                     ) == bc1_vec[i].com;
-                log::info!("MP-ECDSA : Round 2 : test_res_1 {:?}", test_res_1);
+                //log::info!("MP-ECDSA : Round 2 : test_res_1 {:?}", test_res_1);
 
                 if !test_res_1 {
                     // Do a dumb test to search if the right decommit exists
@@ -443,13 +319,13 @@ impl Keys {
                                     &decom_vec[j].blind_factor,
                                 ) == bc1_vec[i].com;
                             if test_res_1_1 {
-                                log::info!("MP-ECDSA : Round 2 RETEST : test_res_1_1 {:?}", test_res_1_1);
-                                log::info!("MP-ECDSA : Round 2 RETEST : i {:?}", i);
-                                log::info!("MP-ECDSA : Round 2 RETEST : j {:?}", j);
-                                log::info!("MP-ECDSA : Round 2 RETEST : decom_vec[i] {:?}", decom_vec[i]);
-                                log::info!("MP-ECDSA : Round 2 RETEST : decom_vec[j] {:?}", decom_vec[j]);
-                                log::info!("MP-ECDSA : Round 2 RETEST : bc1_vec[i] {:?}", bc1_vec[i]);
-                                log::info!("MP-ECDSA : Round 2 RETEST : bc1_vec[j] {:?}", bc1_vec[j]);
+                                // log::info!("MP-ECDSA : Round 2 RETEST : test_res_1_1 {:?}", test_res_1_1);
+                                // log::info!("MP-ECDSA : Round 2 RETEST : i {:?}", i);
+                                // log::info!("MP-ECDSA : Round 2 RETEST : j {:?}", j);
+                                // log::info!("MP-ECDSA : Round 2 RETEST : decom_vec[i] {:?}", decom_vec[i]);
+                                // log::info!("MP-ECDSA : Round 2 RETEST : decom_vec[j] {:?}", decom_vec[j]);
+                                // log::info!("MP-ECDSA : Round 2 RETEST : bc1_vec[i] {:?}", bc1_vec[i]);
+                                // log::info!("MP-ECDSA : Round 2 RETEST : bc1_vec[j] {:?}", bc1_vec[j]);
                             }
                         }
                     }
@@ -459,31 +335,31 @@ impl Keys {
                     .correct_key_proof
                     .verify(&bc1_vec[i].e, zk_paillier::zkproofs::SALT_STRING)
                     .is_ok();
-                log::info!("MP-ECDSA : Round 2 : test_res_2 {:?}", test_res_2);
+                //log::info!("MP-ECDSA : Round 2 : test_res_2 {:?}", test_res_2);
 
                 let test_res_3 = bc1_vec[i].e.n.bit_length() >= PAILLIER_MIN_BIT_LENGTH;
-                log::info!("MP-ECDSA : Round 2 : test_res_3 {:?}", test_res_3);
+                //log::info!("MP-ECDSA : Round 2 : test_res_3 {:?}", test_res_3);
 
                 let test_res_4 = bc1_vec[i].e.n.bit_length() <= PAILLIER_MAX_BIT_LENGTH;
-                log::info!("MP-ECDSA : Round 2 : test_res_4 {:?}", test_res_4);
+                //log::info!("MP-ECDSA : Round 2 : test_res_4 {:?}", test_res_4);
 
                 let test_res_5 =
                     bc1_vec[i].dlog_statement.N.bit_length() >= PAILLIER_MIN_BIT_LENGTH;
-                log::info!("MP-ECDSA : Round 2 : test_res_5 {:?}", test_res_5);
+                //log::info!("MP-ECDSA : Round 2 : test_res_5 {:?}", test_res_5);
 
                 let test_res_6 =
                     bc1_vec[i].dlog_statement.N.bit_length() <= PAILLIER_MAX_BIT_LENGTH;
-                log::info!("MP-ECDSA : Round 2 : test_res_6 {:?}", test_res_6);
+                //log::info!("MP-ECDSA : Round 2 : test_res_6 {:?}", test_res_6);
                 let test_res_7 = bc1_vec[i]
                     .composite_dlog_proof_base_h1
                     .verify(&bc1_vec[i].dlog_statement)
                     .is_ok();
-                log::info!("MP-ECDSA : Round 2 : test_res_7 {:?}", test_res_7);
+                //log::info!("MP-ECDSA : Round 2 : test_res_7 {:?}", test_res_7);
                 let test_res_8 = bc1_vec[i]
                     .composite_dlog_proof_base_h2
                     .verify(&dlog_statement_base_h2)
                     .is_ok();
-                log::info!("MP-ECDSA : Round 2 : test_res_8 {:?}", test_res_8);
+                //log::info!("MP-ECDSA : Round 2 : test_res_8 {:?}", test_res_8);
 
                 let test_res = test_res_1
                     && test_res_2
@@ -535,54 +411,6 @@ impl Keys {
             VerifiableSS::share(params.threshold, params.share_count, &self.u_i);
         if correct_key_correct_decom_all {
             Ok((vss_scheme, secret_shares.to_vec(), no_small_factor_proof,self.party_index))
-        } else {
-            Err(err_type)
-        }
-    }
-
-    pub fn phase2_verify_vss_construct_keypair_phase3_pok_dlog(
-        &self,
-        params: &Parameters,
-        y_vec: &[Point<Secp256k1>],
-        secret_shares_vec: &[Scalar<Secp256k1>],
-        vss_scheme_vec: &[VerifiableSS<Secp256k1>],
-        index: usize,
-    ) -> Result<(SharedKeys<Secp256k1>, DLogProof<Secp256k1, Sha256>), ErrorType> {
-        let mut bad_actors_vec = Vec::new();
-        assert_eq!(y_vec.len(), usize::from(params.share_count));
-        assert_eq!(secret_shares_vec.len(), usize::from(params.share_count));
-        assert_eq!(vss_scheme_vec.len(), usize::from(params.share_count));
-
-        let correct_ss_verify = (0..y_vec.len())
-            .map(|i| {
-                let res = vss_scheme_vec[i]
-                    .validate_share(&secret_shares_vec[i], index.try_into().unwrap())
-                    .is_ok()
-                    && vss_scheme_vec[i].commitments[0] == y_vec[i];
-                if !res {
-                    bad_actors_vec.push(i);
-                    false
-                } else {
-                    true
-                }
-            })
-            .all(|x| x);
-
-        let err_type = ErrorType {
-            error_type: "invalid vss".to_string(),
-            bad_actors: bad_actors_vec,
-            data: Vec::new(),
-        };
-
-        if correct_ss_verify {
-            let (head, tail) = y_vec.split_at(1);
-            let y = tail.iter().fold(head[0].clone(), |acc, x| acc + x);
-
-            let x_i = secret_shares_vec
-                .iter()
-                .fold(Scalar::<Secp256k1>::zero(), |acc, x| acc + x);
-            let dlog_proof = DLogProof::prove(&x_i);
-            Ok((SharedKeys { y, x_i }, dlog_proof))
         } else {
             Err(err_type)
         }

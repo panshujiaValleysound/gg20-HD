@@ -33,7 +33,6 @@ impl Round0 {
     where
         O: Push<Msg<gg_2020::party_i::KeyGenBroadcastMessage1>>,
     {
-        println!("1");
         let party_keys = Keys::create(self.party_i as usize);
         println!("party_keys");
         let mnemonic = Mnemonic::from_entropy(&party_keys.u_i.to_bytes(), Language::English).unwrap(); // 24-word mnemonic

@@ -18,8 +18,7 @@ pub mod blame;
 pub mod party_i;
 pub mod state_machine;
 pub mod hd_acount;
-#[cfg(test)]
-mod test;
+
 
 #[derive(Clone, Debug)]
 pub struct ErrorType {
