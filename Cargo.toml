@@ -32,6 +32,7 @@ num-bigint = ['curv-kzen/num-bigint']
 #cclst = ["class_group"]
 
 [dependencies]
+#rug = "1.20.1"
 subtle = { version = "2" }
 serde = { version = "1.0", features = ["derive"] }
 bip32 = { version = "0.5", features = ["secp256k1"] }

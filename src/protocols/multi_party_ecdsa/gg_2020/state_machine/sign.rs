@@ -35,14 +35,13 @@ use std::mem::replace;
 use std::time::Duration;
 
 //use bip32::secp256k1::elliptic_curve::Scalar;
-use curv::elliptic::curves::{secp256_k1::Secp256k1, Point, Scalar};
+use curv::elliptic::curves::secp256_k1::Secp256k1;
 use round_based::containers::{push::Push, BroadcastMsgs, MessageStore, P2PMsgs, Store, StoreErr};
 use round_based::{IsCritical, Msg, StateMachine};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::utilities::mta::MessageA;
-use crate::protocols::multi_party_ecdsa::gg_2020::party_i::{PartyPrivate};
 use crate::protocols::multi_party_ecdsa::gg_2020 as gg20;
 use gg20::party_i::{SignBroadcastPhase1, SignDecommitPhase1, SignatureRecid};
 use gg20::state_machine::keygen::LocalKey;

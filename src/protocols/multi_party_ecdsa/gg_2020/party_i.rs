@@ -16,8 +16,11 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/multi-party-ecdsa/blob/master/LICENSE>
 */
 
+
+use std::thread;
+
 use std::fmt::Debug;
-use std::{fs, ops::Deref, time};
+use std::ops::Deref;
 
 use centipede::juggling::proof_system::{Helgamalsegmented, Witness};
 use centipede::juggling::segmentation::Msegmentation;
@@ -28,7 +31,6 @@ use curv::cryptographic_primitives::proofs::sigma_correct_homomorphic_elgamal_en
 use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
 use curv::elliptic::curves::{secp256_k1::Secp256k1, Curve, Point, Scalar};
 use curv::BigInt;
-use paillier::serialize::bigint;
 use sha2::Sha256;
 
 use crate::protocols::multi_party_ecdsa::gg_2018::VerifiableSS;
@@ -42,7 +44,6 @@ use zk_paillier::zkproofs::NiCorrectKeyProof;
 use zk_paillier::zkproofs::{CompositeDLogProof, DLogStatement};
 use crate::no_small_proof::no_small_proof::{NoSmallFactorSetUp,NoSmallFactorWitness,NoSmallFactorStatement,NoSmallFactorProof};
 
-use crate::protocols::multi_party_ecdsa::gg_2020::hd_acount;
 use crate::protocols::multi_party_ecdsa::gg_2020::ErrorType;
 use crate::utilities::zk_pdl_with_slack::{PDLwSlackProof, PDLwSlackStatement, PDLwSlackWitness};
 use curv::cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
@@ -379,7 +380,6 @@ impl Keys {
             })
             .all(|x| x);
 
-        //no_small_factor_proof
         let no_small_factor_proof = (0..bc1_vec.len())
             .map(|i|{
                 let nsf_setup = NoSmallFactorSetUp{
@@ -451,11 +451,6 @@ impl Keys {
 
         let correct_nsf_verify = (0..y_vec.len())
             .map(|i| {
-                // let res = vss_scheme_vec[i]
-                //     .validate_share(&secret_shares_vec[i], index.try_into().unwrap())
-                //     .is_ok()
-                //     && vss_scheme_vec[i].commitments[0] == y_vec[i];
-                //println!("{}",i);
                 let nsf_setup = NoSmallFactorSetUp{
                     n_tilde_: self.N_tilde.clone(),
                     s_ : self.h1.clone(),

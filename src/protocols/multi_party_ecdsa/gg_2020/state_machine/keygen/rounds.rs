@@ -129,18 +129,6 @@ impl Round2 {
         };
         let received_decom = input.into_vec_including_me(self.decom);
 
-        log::info!("MP-ECDSA : Round 2 : threshold {:?}", params.threshold);
-        log::info!("MP-ECDSA : Round 2 : share_count {:?}", params.share_count);
-        log::info!("MP-ECDSA : Round 2 : received_decom {:?}", received_decom);
-
-        // let vss_result = self
-        //     .keys
-        //     .phase1_verify_com_phase3_verify_correct_key_verify_dlog_phase2_distribute(
-        //         &params,
-        //         &received_decom,
-        //         &self.received_comm,
-        //     )
-        //     .map_err(ProceedError::Round2VerifyCommitments)?;
         let vss_result = self
             .keys
             .phase1_verify_com_phase3_verify_correct_key_verify_dlog_phase2_distribute_nsf_proof(
@@ -148,11 +136,7 @@ impl Round2 {
                 &received_decom,
                 &self.received_comm,
             )
-            // .phase1_verify_com_phase3_verify_correct_key_verify_dlog_phase2_distribute(
-            //     &params,
-            //     &received_decom,
-            //     &self.received_comm,
-            // )
+
             .map_err(ProceedError::Round2VerifyCommitments)?;
         for (i, share) in vss_result.1.iter().enumerate() {
             if i + 1 == usize::from(self.party_i) {
@@ -240,26 +224,13 @@ impl Round3 {
             decrypted_input.finish().unwrap()
         };
 
-        // let (vss_schemes, party_shares): (Vec<_>, Vec<_>) = input
-        //     .into_vec_including_me((self.own_vss, self.own_share))
-        //     .into_iter()
-        //     .unzip();
         let vec_including_me = input
         .into_vec_including_me((self.own_vss, self.own_share, self.own_nsf_proof));
         
         let vss_schemes: Vec<_> = vec_including_me.iter().map(|(a, _, _)| a.clone()).collect();
         let party_shares: Vec<_> = vec_including_me.iter().map(|(_, b, _)| b.clone()).collect();
         let nsf_proofs: Vec<_> = vec_including_me.iter().map(|(_, _, c)| c.clone()).collect();
-        // let (shared_keys, dlog_proof) = self
-        //     .keys
-        //     .phase2_verify_vss_construct_keypair_phase3_pok_dlog(
-        //         &params,
-        //         &self.y_vec,
-        //         &party_shares,
-        //         &vss_schemes,
-        //         self.party_i.into(),
-        //     )
-        //     .map_err(ProceedError::Round3VerifyVssConstruct)?;
+
         let (shared_keys, dlog_proof) = self
         .keys
         .phase2_verify_vss_construct_keypair_phase3_pok_dlog_nsf_verify(

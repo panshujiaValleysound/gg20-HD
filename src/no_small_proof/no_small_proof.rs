@@ -74,9 +74,9 @@ impl NoSmallFactorProof{
         let q = &witness.q_;
 
         let sqrt_n0 = n0.sqrt();
-        let limit_alpha_beta = (BigInt::one() << (l + varepsilon) as usize) * sqrt_n0;
+        let limit_alpha_beta = (BigInt::from(2) << (l + varepsilon) as usize) * sqrt_n0;
         // 2^l * n_tilde
-        let limit_mu_nu = (BigInt::one() << (*l as usize)) * n_tilde;
+        let limit_mu_nu = (BigInt::from(2) << (*l as usize)) * n_tilde;
         // 2^l * n0 * n_tilde
         let limit_sigma = &limit_mu_nu * n0;
         // 2^(l + varepsilon) * n0 * n_tilde
@@ -104,7 +104,6 @@ impl NoSmallFactorProof{
         // T = Q^alpha * t^r  mod n_tilde
         let t__ = (BigInt::mod_pow(&q__,&alpha, n_tilde) * BigInt::mod_pow(t,&r, n_tilde)) % n_tilde;
 
-        //generate e
         let mut sha512_hasher = Sha512::new();
         sha512_hasher.update(&n0.to_bytes());
         sha512_hasher.update(&p__.to_bytes());
@@ -123,23 +122,6 @@ impl NoSmallFactorProof{
         let w1__ = x + &e * mu;
         let w2__ = y + &e * &nu;
         let v__ = r + &e * sigma_tilde;
-
-        // println!("----------------------------------");
-
-        // println!("N      {}",n_tilde);
-        // println!("h1     {}",s);
-        // println!("h2     {}",t);
-        // println!("n0     {}",n0);
-
-        // println!("sigma  {}",sigma__);
-        // println!("p      {}",p__);
-        // println!("q      {}",q__);
-        // println!("z1     {}",z1__);
-        // println!("z2     {}",z2__);
-        // println!("w1     {}",w1__);
-        // println!("w2     {}",w2__);
-        // println!("v      {}",v__);
-        // println!("----------------------------------");
 
         Some(NoSmallFactorProof{
             p__ : p__,
@@ -161,25 +143,13 @@ impl NoSmallFactorProof{
         let n_tilde = &setup.n_tilde_;
         let s = &setup.s_;
         let t = &setup.t_;
-
-        // println!("----------------------------------");
-        // println!("N      {}",n_tilde);
-        // println!("h1     {}",s);
-        // println!("h2     {}",t);
-        
-
         
         let n0 = &statement.n0_;
         let l = &statement.l_;
         let varepsilon = &statement.varepsilon_;
-        // println!("n0     {}",n0);
-        // println!("sigma  {}",&self.sigma__);
-        // println!("----------------------------------");
-        // println!("l{}",l);
-        // println!("varepsilon{}",varepsilon);
 
         let sqrt_n0 = &n0.sqrt();
-        let limit_alpha_beta = (BigInt::one() << (l + varepsilon) as usize) * sqrt_n0;
+        let limit_alpha_beta = (BigInt::from(2) << (l + varepsilon) as usize) * sqrt_n0;
         if self.z1__ > limit_alpha_beta.clone() || self.z1__ < BigInt::zero() - &limit_alpha_beta{return false;}
         if self.z2__ > limit_alpha_beta.clone() || self.z2__ < BigInt::zero() - &limit_alpha_beta{return false;}
 
