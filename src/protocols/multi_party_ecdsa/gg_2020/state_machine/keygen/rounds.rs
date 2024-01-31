@@ -361,6 +361,42 @@ pub struct LocalKey<E: Curve> {
     pub n: u16,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Old_LocalKey<E: Curve> {
+    pub paillier_dk: paillier::DecryptionKey,
+    pub pk_vec: Vec<Point<E>>,
+    pub keys_linear: gg_2020::party_i::SharedKeys<E>,
+    pub paillier_key_vec: Vec<EncryptionKey>,
+    pub y_sum_s: Point<E>,
+    pub h1_h2_n_tilde_vec: Vec<DLogStatement>,
+    pub vss_scheme: VerifiableSS<E>,
+    pub i: u16,
+    pub t: u16,
+    pub n: u16,
+}
+impl Old_LocalKey<Secp256k1> {
+    pub fn to_LocalKey(&self) -> LocalKey<Secp256k1>{
+        LocalKey {
+            raw_key : Keys::<Secp256k1>::create(1),
+            paillier_dk: self.paillier_dk.clone(),
+            pk_vec : self.pk_vec.clone(),
+
+            keys_linear: SharedKeys{
+                y : self.keys_linear.y.clone(),
+                x_i : self.keys_linear.x_i.clone()
+            },
+            paillier_key_vec : self.paillier_key_vec.clone(),
+            y_sum_s: self.y_sum_s.clone(),
+            h1_h2_n_tilde_vec : self.h1_h2_n_tilde_vec.clone(),
+
+            vss_scheme : self.vss_scheme.clone(),
+
+            i: self.i,
+            t: self.t,
+            n: self.n,
+        }
+    }
+}
 impl LocalKey<Secp256k1> {
     /// Public key of secret shared between parties
     pub fn public_key(&self) -> Point<Secp256k1> {

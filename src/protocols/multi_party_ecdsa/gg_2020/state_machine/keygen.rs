@@ -22,7 +22,7 @@ use crate::protocols::multi_party_ecdsa::gg_2020;
 mod rounds;
 
 use private::InternalError;
-pub use rounds::{LocalKey, ProceedError};
+pub use rounds::{LocalKey, Old_LocalKey, ProceedError};
 use rounds::{Round0, Round1, Round2, Round3, Round4};
 
 /// Keygen protocol state machine
